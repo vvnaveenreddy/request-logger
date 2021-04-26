@@ -6,13 +6,13 @@ pipeline {
   }
 
   stages {
-    stage('Build') {
+    stage('Build App') {
       steps {
         sh 'mvn package'
       }
     }
     
-    stage('Make Container') {
+    stage('Build Image') {
       steps {
       sh "docker build -t brainupgrade/request-logger:${env.BUILD_ID} ."
       sh "docker tag brainupgrade/request-logger:${env.BUILD_ID} brainupgrade/request-logger:latest"

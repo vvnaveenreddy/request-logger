@@ -1,4 +1,4 @@
-package hello;
+package in.brainupgrade;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

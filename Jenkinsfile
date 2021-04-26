@@ -6,7 +6,7 @@ node {
     }
 
     stage('Maven Build') {
-        app.inside{ sh 'mvn -Dmaven.test.failure.ignore=true clean install' }
+        app.inside{ sh 'echo "maven build "' }
     }
 
     stage('Build image') {

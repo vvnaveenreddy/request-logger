@@ -1,31 +1,36 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3-alpine'
-            args '-v /root/.m2:/root/.m2'
-        }
+  agent any
+
+  tools {
+    maven 'mvn-3.5.2'
+  }
+
+  stages {
+    stage('Build') {
+      steps {
+        sh 'mvn package'
+      }
     }
-    stages {
-        stage('Build') {
-            steps {
-                sh 'mvn -B -DskipTests clean package'
-            }
-        }
-        stage('Build image') {
-            app = docker.build("brainupgrade/request-logger")
-        }
-        stage('Test image') {
-            app.inside {
-              sh 'echo "Tests passed"'
-           }
-        }
-        stage('Push image') {
-          docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
-            app.push("${env.BUILD_NUMBER}")
-            app.push("latest")
-          }
-        }
     
+    stage('Make Container') {
+      steps {
+      sh "docker build -t brainupgrade/request-logger:${env.BUILD_ID} ."
+      sh "docker tag brainupgrade/request-logger:${env.BUILD_ID} brainupgrade/request-logger:latest"
+      }
     }
- 
+    
+  }
+
+  post {
+    always {
+      archive 'target/**/*.jar'
+    }
+    success {
+      withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+        sh "docker login -u ${USERNAME} -p ${PASSWORD}"
+        sh "docker push brainupgrade/request-logger:${env.BUILD_ID}"
+        sh "docker push brainupgrade/request-logger:latest"
+      }
+    }
+  }
 }

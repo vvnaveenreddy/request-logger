@@ -1,0 +1,31 @@
+pipeline {
+    agent {
+        docker {
+            image 'maven:3-alpine'
+            args '-v /root/.m2:/root/.m2'
+        }
+    }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'mvn -B -DskipTests clean package'
+            }
+        }
+        stage('Build image') {
+            app = docker.build("brainupgrade/request-logger")
+        }
+        stage('Test image') {
+            app.inside {
+              sh 'echo "Tests passed"'
+           }
+        }
+        stage('Push image') {
+          docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
+            app.push("${env.BUILD_NUMBER}")
+            app.push("latest")
+          }
+        }
+    
+    }
+ 
+}

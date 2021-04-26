@@ -1,27 +1,36 @@
-node {
-    def app
+pipeline {
+  agent any
 
-    stage('Clone repository') {
-        checkout scm
-    }
+  tools {
+    maven 'mvn'
+  }
 
-    stage('Maven Build') {
-        app.inside{ sh 'echo "maven build "' }
+  stages {
+    stage('Build') {
+      steps {
+        sh 'mvn package'
+      }
     }
+    
+    stage('Make Container') {
+      steps {
+      sh "docker build -t brainupgrade/request-logger:${env.BUILD_ID} ."
+      sh "docker tag brainupgrade/request-logger:${env.BUILD_ID} brainupgrade/request-logger:latest"
+      }
+    }
+    
+  }
 
-    stage('Build image') {
-        app = docker.build("brainupgrade/request-logger")
+  post {
+    always {
+      archive 'target/**/*.jar'
     }
-    stage('Test image') {
-        app.inside {
-            sh 'echo "Tests passed"'
-        }
+    success {
+      withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+        sh "docker login -u ${USERNAME} -p ${PASSWORD}"
+        sh "docker push brainupgrade/request-logger:${env.BUILD_ID}"
+        sh "docker push brainupgrade/request-logger:latest"
+      }
     }
-
-    stage('Push image') {
-        docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
-            app.push("${env.BUILD_NUMBER}")
-            app.push("latest")
-        }
-    }
+  }
 }
